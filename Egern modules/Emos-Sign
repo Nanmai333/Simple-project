@@ -1,0 +1,58 @@
+name: "Emos 自动签到 (修仙版)"
+description: "自动捕获 emos.best 凭证并执行每日修仙签到。支持通过 UI 修改 Cron 定时、签到文案及功能开关。"
+author: "Nanmai333"
+icon: "leaf.fill"
+
+# ================= UI 配置界面 =================
+env_schema:
+  CAPTURE_ENABLED:
+    name: "账号抓取 - 启用"
+    description: "关闭后将停止捕获 emos.best 的登录凭证"
+    options:
+      - "true"
+      - "false"
+    default_value: "true"
+
+  TASK_ENABLED:
+    name: "签到任务 - 总开关"
+    description: "关闭后定时签到脚本将不执行任何操作"
+    options:
+      - "true"
+      - "false"
+    default_value: "true"
+
+  SIGN_CONTENT:
+    name: "签到感悟"
+    description: "设置每次签到时发送的文案"
+    default_value: "滴滴打卡，开始修仙"
+
+  SIGN_CRON:
+    name: "签到时间 (Cron)"
+    description: "在此填写 Cron 表达式（例如 20 8,20 * * * 表示每天 8:20 和 20:20）"
+    default_value: "20 8,20 * * *"
+
+# ================= 域名解密 =================
+mitm:
+  hostnames:
+    - "emos.best"
+
+# ================= 数据抓取 =================
+http_captures:
+  - "emos.best"
+
+# ================= 脚本配置 =================
+scriptings:
+  - http_request:
+      name: "Emos 账号抓取"
+      match: "^https://emos\\.best/api/user"
+      # 此处已更新为你的 GitHub 地址，用于获取 Token
+      script_url: "https://raw.githubusercontent.com/Nanmai333/Emos-Sign/refs/heads/main/emos.js"
+      timeout: 10
+
+  - schedule:
+      name: "Emos 每日修仙任务"
+      # 使用 UI 界面中填写的 Cron 变量
+      cron: "{{SIGN_CRON}}"
+      # 此处已更新为你的 GitHub 地址，用于执行签到
+      script_url: "https://raw.githubusercontent.com/Nanmai333/Emos-Sign/refs/heads/main/emos.js"
+      timeout: 120
