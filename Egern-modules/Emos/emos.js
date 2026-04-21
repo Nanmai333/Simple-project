@@ -11,7 +11,7 @@ var levels = [
     { n: "💨练气期·三层", max: 39 }, { n: "💨练气期·四层", max: 49 }, { n: "💨练气期·五层", max: 59 },
     { n: "💨练气期·六层", max: 69 }, { n: "💨练气期·七层", max: 79 }, { n: "💨练气期·八层", max: 89 },
     { n: "💨练气期·九层", max: 99 }, { n: "🏛️筑基期·初期", max: 149 }, { n: "🏛️筑基期·中期", max: 299 },
-    { n: "🏛️筑基期·后期", max: 599 }, { n: "🏛️筑基期·圆满", max: 999 }, { n: "💎结丹期·初期", max: 1999 },
+    { n: "🏛️筑基期·后期", max: 599 }, { n: "🏛️筑基期·圆圆满", max: 999 }, { n: "💎结丹期·初期", max: 1999 },
     { n: "💎结丹期·中期", max: 3499 }, { n: "💎结丹期·后期", max: 5999 }, { n: "💎结丹期·圆满", max: 9999 },
     { n: "👶元婴期·初期", max: 19999 }, { n: "👶元婴期·中期", max: 34999 }, { n: "👶元婴期·后期", max: 59999 },
     { n: "👶元婴期·圆满", max: 99999 }, { n: "✨化神期", max: 499999 }, { n: "🌌炼虚期", max: 999999 },
@@ -49,7 +49,7 @@ function setStorage(val, key) {
 // ================= 主逻辑区分 =================
 
 if (typeof $request !== "undefined" && $request) {
-    // ---------- 逻辑 A: 获取 Token (http-request) ----------
+    // ---------- 逻辑 A: 获取 Token (HTTP Request) ----------
     var headers = $request.headers;
     var auth = headers["Authorization"] || headers["authorization"];
     
@@ -58,18 +58,19 @@ if (typeof $request !== "undefined" && $request) {
         var oldToken = getStorage(tokenKey);
         
         if (!oldToken || oldToken !== newToken) {
+            // Token 发生变化
             if (setStorage(newToken, tokenKey)) {
-                $notification.post("emos 签到", "✅ 新 Token 获取成功", "凭证已更新，开始修仙！");
+                $notification.post("emos 抓取", "✅ 新 Token 获取成功", "凭证已更新，开始修仙！");
             }
         } else {
-            // Token 一致时通常不弹窗，或者仅记录
-            console.log("emos: Token 未变化，无需更新");
+            // Token 未变化
+            $notification.post("emos 抓取", "ℹ️ 重复 Token 提醒", "凭证一致，无需更新。");
         }
     }
     $done({});
 
 } else {
-    // ---------- 逻辑 B: 自动签到 (schedule) ----------
+    // ---------- 逻辑 B: 自动签到 (Schedule) ----------
     var savedToken = getStorage(tokenKey);
     if (!savedToken) {
         $notification.post("emos 签到", "❌ 失败", "未找到 Token，请先登录 emos.best 网页");
@@ -81,7 +82,6 @@ if (typeof $request !== "undefined" && $request) {
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X)"
         };
 
-        // 步骤 1：获取用户信息
         $httpClient.get({ url: "https://emos.best/api/user", headers: signHeaders }, function(err, resp, data) {
             if (err || resp.status !== 200) {
                 $notification.post("emos 签到", "❌ 网络错误", "无法连接服务器获取资料");
@@ -103,7 +103,6 @@ if (typeof $request !== "undefined" && $request) {
                     $notification.post("emos 签到", "✨ 仙途长青", msg);
                     $done();
                 } else {
-                    // 步骤 2：执行签到 (从环境变量读取文案，默认为滴滴打卡)
                     var signContent = (typeof $env !== "undefined" && $env.read("SIGN_CONTENT")) || "滴滴打卡";
                     $httpClient.put({
                         url: "https://emos.best/api/user/sign?content=" + encodeURIComponent(signContent),
