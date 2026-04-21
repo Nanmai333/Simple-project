@@ -1,5 +1,5 @@
 /**
- * emos 自动签到 + Token 获取 (二合一完整版)
+ * emos 自动签到 + Token 获取 (二合一强化通知版)
  * 适配 Egern / Quantumult X / Loon / Surge
  */
 
@@ -11,7 +11,7 @@ var levels = [
     { n: "💨练气期·三层", max: 39 }, { n: "💨练气期·四层", max: 49 }, { n: "💨练气期·五层", max: 59 },
     { n: "💨练气期·六层", max: 69 }, { n: "💨练气期·七层", max: 79 }, { n: "💨练气期·八层", max: 89 },
     { n: "💨练气期·九层", max: 99 }, { n: "🏛️筑基期·初期", max: 149 }, { n: "🏛️筑基期·中期", max: 299 },
-    { n: "🏛️筑基期·后期", max: 599 }, { n: "🏛️筑基期·圆圆满", max: 999 }, { n: "💎结丹期·初期", max: 1999 },
+    { n: "🏛️筑基期·后期", max: 599 }, { n: "🏛️筑基期·圆满", max: 999 }, { n: "💎结丹期·初期", max: 1999 },
     { n: "💎结丹期·中期", max: 3499 }, { n: "💎结丹期·后期", max: 5999 }, { n: "💎结丹期·圆满", max: 9999 },
     { n: "👶元婴期·初期", max: 19999 }, { n: "👶元婴期·中期", max: 34999 }, { n: "👶元婴期·后期", max: 59999 },
     { n: "👶元婴期·圆满", max: 99999 }, { n: "✨化神期", max: 499999 }, { n: "🌌炼虚期", max: 999999 },
@@ -37,7 +37,7 @@ function getCultivationInfo(carrot) {
     return { name: "未知", bar: "□□□□□□□□□□", percent: "0.0", nextNeed: 0 };
 }
 
-// ================= 存储工具适配 =================
+// ================= 存储工具 =================
 function getStorage(key) {
     return (typeof $persistentStore !== "undefined") ? $persistentStore.read(key) : null;
 }
@@ -46,10 +46,9 @@ function setStorage(val, key) {
     return (typeof $persistentStore !== "undefined") ? $persistentStore.write(val, key) : false;
 }
 
-// ================= 主逻辑区分 =================
-
+// ================= 主逻辑 =================
 if (typeof $request !== "undefined" && $request) {
-    // ---------- 逻辑 A: 获取 Token (HTTP Request) ----------
+    // ---------- 抓取模式 (HTTP Request) ----------
     var headers = $request.headers;
     var auth = headers["Authorization"] || headers["authorization"];
     
@@ -58,22 +57,22 @@ if (typeof $request !== "undefined" && $request) {
         var oldToken = getStorage(tokenKey);
         
         if (!oldToken || oldToken !== newToken) {
-            // Token 发生变化
+            // Token 变化或首次抓取
             if (setStorage(newToken, tokenKey)) {
-                $notification.post("emos 抓取", "✅ 新 Token 获取成功", "凭证已更新，开始修仙！");
+                $notification.post("emos 抓取", "✅ 新 Token 获取成功", "凭证已更新，仙路再续！");
             }
         } else {
-            // Token 未变化
-            $notification.post("emos 抓取", "ℹ️ 重复 Token 提醒", "凭证一致，无需更新。");
+            // Token 未变化：显式弹出通知
+            $notification.post("emos 抓取", "ℹ️ 重复 Token 提醒", "当前凭证有效，无需重复更新。");
         }
     }
     $done({});
 
 } else {
-    // ---------- 逻辑 B: 自动签到 (Schedule) ----------
+    // ---------- 签到模式 (Schedule) ----------
     var savedToken = getStorage(tokenKey);
     if (!savedToken) {
-        $notification.post("emos 签到", "❌ 失败", "未找到 Token，请先登录 emos.best 网页");
+        $notification.post("emos 签到", "❌ 失败", "未找到 Token，请先访问 emos.best 触发抓取");
         $done();
     } else {
         var signHeaders = {
@@ -84,7 +83,7 @@ if (typeof $request !== "undefined" && $request) {
 
         $httpClient.get({ url: "https://emos.best/api/user", headers: signHeaders }, function(err, resp, data) {
             if (err || resp.status !== 200) {
-                $notification.post("emos 签到", "❌ 网络错误", "无法连接服务器获取资料");
+                $notification.post("emos 签到", "❌ 网络错误", "无法连接服务器，请检查网络");
                 $done();
                 return;
             }
@@ -96,13 +95,14 @@ if (typeof $request !== "undefined" && $request) {
 
                 if (isSignedToday) {
                     var lv = getCultivationInfo(uObj.carrot);
-                    var msg = "👨‍🌾 重复修仙 明天再修💪\n";
+                    var msg = "👨‍🌾 今日功课已成，道友请歇息 💪\n";
                     msg += "修为: [" + lv.name + "] " + uObj.carrot + " 🥕\n";
                     msg += "进度: [" + lv.bar + "] " + lv.percent + "%\n";
                     msg += (lv.nextNeed > 0 ? "🎯 破境还需: " + lv.nextNeed + " 🥕" : "👑 已达极境！");
                     $notification.post("emos 签到", "✨ 仙途长青", msg);
                     $done();
                 } else {
+                    // 执行签到：文案优先尝试读取 UI 环境设置
                     var signContent = (typeof $env !== "undefined" && $env.read("SIGN_CONTENT")) || "滴滴打卡";
                     $httpClient.put({
                         url: "https://emos.best/api/user/sign?content=" + encodeURIComponent(signContent),
@@ -121,13 +121,13 @@ if (typeof $request !== "undefined" && $request) {
                             
                             $notification.post("emos 签到", "✅ 突破成功", msg);
                         } else {
-                            $notification.post("emos 签到", "⚠️ 签到失败", "服务器拒绝了请求或已签过");
+                            $notification.post("emos 签到", "⚠️ 签到失败", "可能是请求过快或服务器异常");
                         }
                         $done();
                     });
                 }
             } catch (e) {
-                $notification.post("emos 签到", "❌ 脚本异常", "数据解析失败");
+                $notification.post("emos 签到", "❌ 解析异常", "数据格式化失败");
                 $done();
             }
         });
